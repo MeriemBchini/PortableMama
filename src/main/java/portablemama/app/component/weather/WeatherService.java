@@ -2,10 +2,14 @@ package portablemama.app.component.weather;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
 import portablemama.app.framework.Components;
 import portablemama.app.framework.JSONUtils;
 import portablemama.app.framework.LLMService;
+import portablemama.app.framework.OpenAIService;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -15,9 +19,9 @@ public class WeatherService implements Components<List<Map<String, Object>>> {
 
     private final LLMService llmService;
     private final String WEATHER_URL =
-            "https://tourism.opendatahub.com/v1/Weather/Realtime?pagesize=100&pagenumber=1&language=en";
+            "https://tourism.opendatahub.com/v1/Weather/Realtime";
 
-    public WeatherService(LLMService llmService) {
+    public WeatherService(OpenAIService llmService) {
         this.llmService = llmService;
     }
 
@@ -28,20 +32,25 @@ public class WeatherService implements Components<List<Map<String, Object>>> {
 
     @Override
     public List<Map<String, Object>> getFilteredData(Map<String, String> params) {
-        String name = params.get("name");
+//        String name = params.get("name");
         String date = params.get("date");
 
+     // Build URI with query parameters
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(WEATHER_URL);
+        params.forEach(builder::queryParam);
+        URI uri = builder.build().encode().toUri();
+        
         RestTemplate restTemplate = new RestTemplate();
-        Map<String, Object> response = restTemplate.getForObject(WEATHER_URL, Map.class);
+        Map<String, Object> response = restTemplate.getForObject(uri, Map.class);
         if (response == null || response.get("Items") == null) return List.of();
 
         List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("Items");
 
         return items.stream()
                 .filter(item ->
-                        item.get("name") != null && item.get("lastUpdated") != null &&
-                        item.get("name").toString().equalsIgnoreCase(name) &&
-                        item.get("lastUpdated").toString().startsWith(date)
+                        item.get("name") != null && item.get("lastUpdated") != null
+//                        item.get("name").toString().equalsIgnoreCase(name) &&
+                        && item.get("lastUpdated").toString().startsWith(date)
                 )
                 .collect(Collectors.toList());
     }

@@ -5,6 +5,7 @@ import org.springframework.web.client.RestTemplate;
 import portablemama.app.framework.Components;
 import portablemama.app.framework.JSONUtils;
 import portablemama.app.framework.LLMService;
+import portablemama.app.framework.OllamaLLMService;
 
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,7 @@ public class SkiService implements Components<List<Map<String, Object>>> {
     private final LLMService llmService;
     private final String SKI_URL = "https://tourism.opendatahub.com/v1/Weather/Measuringpoint";
 
-    public SkiService(LLMService llmService) {
+    public SkiService(OllamaLLMService llmService) {
         this.llmService = llmService;
     }
 

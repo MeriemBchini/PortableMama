@@ -15,23 +15,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class OllamaLLMService implements LLMService {
+public class OpenAIService implements LLMService {
 
-    private final String OLLAMA_URL = "http://localhost:11434/api/generate";
+    private static String OPENAI_API_KEY = "<<open-api-key>>";
     
     @Override
     public String generate(String prompt) {
         try {
-            RestTemplate restTemplate = new RestTemplate();
-            Map<String, Object> body = new HashMap<>();
-//            body.put("model", "llama3");
-            body.put("model", "qwen3:latest");
-            body.put("prompt", prompt);
-            body.put("stream", false);
-
-            Map response = restTemplate.postForObject(OLLAMA_URL, body, Map.class);
-            Object res = response != null ? response.get("response") : null;
-            return res != null ? res.toString() : "LLM returned no response";
+        	ChatModel model = OpenAiChatModel.builder()
+    				.temperature(0.8)
+    				.apiKey(OPENAI_API_KEY)
+    				.modelName(OpenAiChatModelName.GPT_4_O_MINI)
+    				.build();
+//        	ChatMemory memory = MessageWindowChatMemory.withMaxMessages(20);
+//        	memory.add(SystemMessage.from(prompt));
+        	ConversationalChain cc = ConversationalChain
+    				.builder()
+    				.chatModel(model)
+//    				.chatMemory(memory)
+    				.build();
+        	
+        	String aiResponse = cc.execute(prompt);
+        	return aiResponse;
         } catch (Exception e) {
             return "Error calling LLM: " + e.getMessage();
         }

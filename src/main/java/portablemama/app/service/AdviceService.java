@@ -3,6 +3,8 @@ package portablemama.app.service;
 import portablemama.app.component.ski.SkiService;
 import portablemama.app.component.weather.WeatherService;
 import portablemama.app.framework.LLMService;
+import portablemama.app.framework.OllamaLLMService;
+
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -17,7 +19,7 @@ public class AdviceService {
     public AdviceService(
             SkiService skiService,
             WeatherService weatherService,
-            LLMService llmService) {
+            OllamaLLMService llmService) {
         this.skiService = skiService;
         this.weatherService = weatherService;
         this.llmService = llmService;

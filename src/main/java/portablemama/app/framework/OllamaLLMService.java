@@ -1,4 +1,4 @@
-package portablemama.app.framework;
+/*package portablemama.app.framework;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -36,4 +36,4 @@ public class OllamaLLMService implements LLMService {
             return "Error calling LLM: " + e.getMessage();
         }
     }
-}
+}*/

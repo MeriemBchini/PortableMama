@@ -46,7 +46,7 @@ public class WeatherController {
 		List<Map<String, Object>> filtered = weatherService.getFilteredData(params);
 
 		if (filtered.isEmpty()) {
-			return Map.of("data", null, "aiAnalysis", null, "error",
+			return Map.of("data", "", "aiAnalysis", "", "error",
 					"No weather data found for given location and date");
 		}
 
@@ -55,33 +55,45 @@ public class WeatherController {
 		String prompt = """
 				You are a weather risk advisory assistant.
 
-				This is the weather data:
-				Location: %s,
-				Date: %s,
-				Latitude: %s,
-				Longitude: %s,
-				Temperature: %s °C,
-				Wind speed: %s m/s (max %s),
-				Humidity: %s%%,
-				Pressure: %s hPa,
-				Visibility: %s km,
-				Flow rate: %s (m³/s),
-				Wind gust: %s,
-				Sunshine duration: %s (h)
-
-				Let's analyze the weather and response with data EXACTLY by JSON format(don't response anything else):
+				I give you my Weather data:
+				- Location: %s
+				- Date: %s
+				- Latitude: %s
+				- Longitude: %s
+				- Temperature: %s °C
+				- Wind speed: %s m/s (max %s)
+				- Humidity: %s%%
+				- Pressure: %s hPa
+				- Visibility: %s km
+				- Flow rate: %s m³/s
+				- Wind gust: %s
+				- Sunshine duration: %s h
+				
+				You can use this data and external knowledge to enhance the information.
+				
+				Task: Analyze the weather and respond ONLY in the following JSON format:
+				
 				{
-					"shortDes": "<<2 words describe the weather on the day>>",
-					"accessoryRec": "<<10 words maximum for recommendation of accessories if going out>>",
-					"travelRec": "<<20 words maximum for recommendation of clothes if going out>>",
-					"alerts": "<<10 words maximum for alerts or risks if any (snow, ice, wind, low visibility, cold)>>"
+				  "shortDes": "<<two words describing the weather>>",
+				  "accessoryRec": "<<a sentence for accessory recommendations when going out>>",
+				  "travelRec": "<<2 sentences for clothing recommendations>>",
+				  "alerts": "<<1 sentences for weather alerts or risks (snow, ice, wind, low visibility, cold)>>",
+				  "forcast:" "<<2 sentences for weather forcase today>>"
 				}
+				
+				Rules:
+				1. Output must be valid JSON only. Do NOT include explanations or extra text.
+				2. Adhere strictly to word limits for each field.
+				3. Do not add any extra fields or metadata.
+				4. Keep field names exactly as specified.
+
 				""".formatted(currentPosition.get("name"), currentPosition.get("lastUpdated"), latitude, longitude,
 				currentPosition.get("t"), currentPosition.get("ff"), currentPosition.get("wMax"),
 				currentPosition.get("rh"), currentPosition.get("p"), currentPosition.get("visibility"),
 				currentPosition.get("q"), currentPosition.get("wMax"), currentPosition.get("sd"));
 
 		String aiResponse = openAIService.generate(prompt);
+		System.out.print(aiResponse);
 		ObjectMapper mapper = new ObjectMapper();
 		Map<String, String> aiResponseMap = new HashMap<String, String>();
 		try {

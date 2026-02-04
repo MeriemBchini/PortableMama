@@ -1,8 +1,16 @@
-/*package portablemama.app.component.ski;
+package portablemama.app.component.ski;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import portablemama.app.framework.OllamaLLMService;
+import portablemama.app.framework.OpenAIService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -11,69 +19,101 @@ import java.util.Map;
 @RestController
 public class SkiController {
 
-    private final SkiService skiService;
-    private final SkiLLM llmService;
+	private final SkiService skiService;
+	private final OpenAIService llmService;
 
-    public SkiController(SkiService skiService, SkiLLM llmService) {
-        this.skiService = skiService;
-        this.llmService = llmService;
-    }
+	public SkiController(SkiService skiService, OpenAIService llmService) {
+		this.skiService = skiService;
+		this.llmService = llmService;
+	}
 
-    @GetMapping("/api/ski/ai")
-    public Map<String, Object> getSkiAdvice(@RequestParam String region) {
+	@GetMapping("/api/ski/ai")
+	public Map<String, Object> getSkiAdvice(@RequestParam double latitude, @RequestParam double longitude)
+			throws JsonProcessingException {
 
-        List<Map<String, Object>> filtered = skiService.getFilteredSkiData(region);
+		Map<String, String> params = new HashMap<>();
+		params.put("latitude", String.valueOf(latitude));
+		params.put("longitude", String.valueOf(longitude));
 
-        if (filtered.isEmpty()) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("message", "No ski data found for region: " + region);
-            return error;
-        }
+		List<Map<String, Object>> filtered = skiService.getFilteredData(params);
 
-        Map<String, Object> skiData = filtered.get(0);
+		if (filtered.isEmpty()) {
+			return Map.of("data", "", "aiAnalysis", "", "error", "No ski area found for given location");
+		}
 
-        // Safe extraction of nested fields
-        Map<String, Object> gpsPoints = skiData.get("GpsPoints") instanceof Map ? (Map<String,Object>)skiData.get("GpsPoints") : Map.of();
-        Map<String,Object> position = gpsPoints.get("position") instanceof Map ? (Map<String,Object>)gpsPoints.get("position") : Map.of();
-        Map<String,Object> locationInfo = skiData.get("LocationInfo") instanceof Map ? (Map<String,Object>)skiData.get("LocationInfo") : Map.of();
-        Map<String,Object> regionInfo = locationInfo.get("RegionInfo") instanceof Map ? (Map<String,Object>)locationInfo.get("RegionInfo") : Map.of();
-        Map<String,Object> regionNameMap = regionInfo.get("Name") instanceof Map ? (Map<String,Object>)regionInfo.get("Name") : Map.of();
+//		Map<String, Object> skiData = filtered.get(0);
 
-        String regionName = regionNameMap.get("en") != null ? regionNameMap.get("en").toString() : "Unknown Region";
-        String altitude = position.get("Altitude") != null ? position.get("Altitude").toString() : "N/A";
-        String snowHeight = skiData.get("SnowHeight") != null ? skiData.get("SnowHeight").toString() : "0";
-        String newSnow = skiData.get("newSnowHeight") != null ? skiData.get("newSnowHeight").toString() : "0";
-        String lastSnowDate = skiData.get("LastSnowDate") != null ? skiData.get("LastSnowDate").toString() : "N/A";
-        String locationName = skiData.get("Shortname") != null ? skiData.get("Shortname").toString() : "Unknown Location";
+		// Build LLM prompt
+		ObjectMapper mapper = new ObjectMapper();
+		String prompt = """
+				You are a ski advisory assistant. I give you my Ski Data: %s.
+				You can use this data and external knowledge to enhance the information.
+				
+				Task: For each ski area, output ONLY valid JSON corresponding to the following structure:
+				[
+				  {
+				    "areaDescription": "<<short description of the area, max 200 characters>>",
+				    "listGuestReview": [
+				      {
+				        "reviewer": "<<reviewer's name>>",
+				        "content": "<<review content>>",
+				        "rating": "<<rating of the review>>"
+				      }
+				    ],
+				    "warning": {
+				    	"skiing": "<<warning and suggestion for skiing conditions>>",
+				    	"safety": "<<warning and suggestion for cautious of potential avalanche risks>>",
+				    	"equipment": "<<warning and suggestion for ski equipments>>",
+				    	"weatherForecast": "<<warning and suggestion for weather forecast for any additional snowfall or changes in conditions>>"",
+				    },
+				    "recommendDes": "<<recommendation for visiting this ski area>>",
+				    "priceRange": "<<average price range per person, format: number-number currency>>"
+				  }
+				]
+				
+				Rules:
+				1. Output must be valid JSON ONLY. Do NOT include explanations, comments, or extra characters.
+				2. `listGuestReview` should include the top 3 most recent real users’ reviews (if available).
+				3. `areaDescription` should be concise (max 200 characters).
+				4. `recommendDes` must contain exactly 2 sentences.
+				5. `priceRange` must include only numbers and currency, e.g., "30-50 EUR".
+				6.`warning`'s subproperties must have 1 sentence for warning and 1 sentence for suggestion.
+				7. Do not change field names. Keep them exactly as specified.
+				8. Do not add any additional fields or metadata.
+				9. Do not add '```json'
 
-        // Build LLM prompt
-        String prompt = """
-You are a ski advisory assistant.
+				"""
+				.formatted(mapper.writeValueAsString(filtered));
+//
+		String aiResponse = llmService.generate(prompt);
+		System.out.print(aiResponse);
 
-Analyze the ski area data and provide:
-1. A short summary of conditions
-2. Skiing recommendations
-3. Alerts or risks (snow depth, new snow, altitude, cold conditions)
+		List<Map<String, Object>> aiResponseMap = null;
+		try {
+			aiResponseMap = mapper.readValue(aiResponse, new TypeReference<List<Map<String, Object>>>() {
+			});
+		} catch (JsonMappingException e) {
+			System.out.print("aiResponse: \n" + aiResponse);
+			e.printStackTrace();
+		} catch (JsonProcessingException e) {
+			System.out.print("aiResponse: \n" + aiResponse);
+			e.printStackTrace();
+		}
 
-Ski Data:
-Region: %s
-Location: %s
-Altitude: %s m
-Snow Height: %s cm
-New Snow (last 24h): %s cm
-Last Snowfall Date: %s
-""".formatted(regionName, locationName, altitude, snowHeight, newSnow, lastSnowDate);
+		if (aiResponseMap != null) {
+			for (int i = 0; i < filtered.size(); i++) {
+				filtered.get(i).put("aiAnalysis", aiResponseMap.get(i));
+			}
+		}
 
-        String aiResponse = llmService.getRecommendation(prompt);
+		// Optional simple alert
+//		boolean alert = Integer.parseInt(snowHeight) < 20;
 
-        // Optional simple alert
-        boolean alert = Integer.parseInt(snowHeight) < 20;
+		Map<String, Object> result = new HashMap<>();
+		result.put("data", filtered);
+//		result.put("aiAnalysis", aiResponseMap);
+//		result.put("alert", alert ? "YES" : "NO");
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("skiData", skiData);
-        result.put("aiAnalysis", aiResponse);
-        result.put("alert", alert ? "YES" : "NO");
-
-        return result;
-    }
-}*/
+		return result;
+	}
+}

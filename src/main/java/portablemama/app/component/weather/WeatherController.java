@@ -1,6 +1,7 @@
 package portablemama.app.component.weather;
 
 import org.springframework.web.bind.annotation.GetMapping;
+
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -9,7 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import portablemama.app.framework.OllamaLLMService;
+import portablemama.app.framework.OpenAIService;
 import portablemama.app.framework.OpenAIService;
 
 import java.awt.print.Printable;
@@ -22,13 +23,11 @@ import java.util.Map;
 public class WeatherController {
 
 	private final WeatherService weatherService;
-	private final OllamaLLMService ollamaService;
 	private final OpenAIService openAIService;
 
-	public WeatherController(WeatherService weatherService, OllamaLLMService ollamaService,
+	public WeatherController(WeatherService weatherService, 
 			OpenAIService openAIService) {
 		this.weatherService = weatherService;
-		this.ollamaService = ollamaService;
 		this.openAIService = openAIService;
 	}
 

@@ -9,7 +9,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import portablemama.app.framework.OllamaLLMService;
 import portablemama.app.framework.OpenAIService;
 
 import java.util.HashMap;
@@ -77,7 +76,7 @@ public class SkiController {
 				3. `areaDescription` should be concise (max 200 characters).
 				4. `recommendDes` must contain exactly 2 sentences.
 				5. `priceRange` must include only numbers and currency, e.g., "30-50 EUR".
-				6.`warning`'s subproperties must have 1 sentence for warning and 1 sentence for suggestion.
+				6.`warning`'s subproperties must have 1 sentence for warning and 1 sentence for suggestion and they should be very on detail
 				7. Do not change field names. Keep them exactly as specified.
 				8. Do not add any additional fields or metadata.
 				9. Do not add '```json'
